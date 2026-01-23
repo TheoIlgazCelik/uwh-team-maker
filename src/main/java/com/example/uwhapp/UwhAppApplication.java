@@ -34,29 +34,37 @@ public class UwhAppApplication {
         System.out.println("SPRING_PROFILES_ACTIVE=" + System.getenv("SPRING_PROFILES_ACTIVE"));
         System.out.println("DATABASE_URL=" + (System.getenv("DATABASE_URL") != null ? "[present]" : "[missing]"));
         System.out.println("======================");
+
+        // Convert a common 'postgres://user:pass@host:port/db' style URL to JDBC format
         String dbUrl = System.getenv("DATABASE_URL");
         if (dbUrl != null && dbUrl.startsWith("postgres://")) {
             try {
                 URI uri = new URI(dbUrl);
-                String[] userInfo = uri.getUserInfo().split(":");
-                String username = userInfo[0];
-                String password = userInfo.length > 1 ? userInfo[1] : "";
+                String userInfo = uri.getUserInfo();
+                String username = null;
+                String password = null;
+                if (userInfo != null) {
+                    String[] parts = userInfo.split(":", 2);
+                    username = parts[0];
+                    password = parts.length > 1 ? parts[1] : "";
+                }
 
-                String jdbcUrl = "jdbc:postgresql://" + uri.getHost()
-                        + ":" + uri.getPort()
-                        + uri.getPath();
+                String host = uri.getHost();
+                int port = uri.getPort();
+                String path = uri.getPath(); // includes leading '/'
+                String jdbcUrl = "jdbc:postgresql://" + host + (port != -1 ? ":" + port : "") + path;
 
-                // set system properties so Spring picks them up
+                if (username != null) System.setProperty("spring.datasource.username", username);
+                if (password != null) System.setProperty("spring.datasource.password", password);
                 System.setProperty("spring.datasource.url", jdbcUrl);
-                System.setProperty("spring.datasource.username", username);
-                System.setProperty("spring.datasource.password", password);
 
-                System.out.println("Converted DATABASE_URL -> " + jdbcUrl + " (user set)");
+                System.out.println("Converted DATABASE_URL -> JDBC URL: " + jdbcUrl);
             } catch (Exception e) {
                 System.err.println("Failed to parse DATABASE_URL: " + e.getMessage());
                 e.printStackTrace();
             }
         }
+
         System.out.println("AFTER CODE DATABASE_URL=" + (System.getenv("DATABASE_URL") != null ? "[present]" : "[missing]"));
 
         SpringApplication.run(UwhAppApplication.class, args);
@@ -86,49 +94,27 @@ public class UwhAppApplication {
                     e.setCreatedBy(1L);
                     eventRepo.save(e);
                 }
-                // --------------------
                 // RSVPS
-                // --------------------
                 if (rsvpRepo.count() == 0) {
-
-                    // get first event
                     Event event = eventRepo.findAll().get(0);
-
-                    // get all users
                     List<User> users = userRepo.findAll();
-
-                    // create sample RSVPs
                     for (int i = 0; i < users.size(); i++) {
-
                         User u = users.get(i);
-
                         String status;
+                        if (i == 0) status = "yes";
+                        else if (i == 1) status = "yes";
+                        else if (i == 2) status = "maybe";
+                        else if (i == 3) status = "no";
+                        else status = "maybe";
 
-                        // give varied responses
-                        if (i == 0) {
-                            status = "yes";
-                        } else if (i == 1) {
-                            status = "yes";
-                        } else if (i == 2) {
-                            status = "maybe";
-                        } else if (i == 3) {
-                            status = "no";
-                        } else {
-                            status = "maybe";
-                        }
-
-                        Rsvp r = new Rsvp(
-                                event.getId(),
-                                u.getId(),
-                                status
-                        );
-
+                        Rsvp r = new Rsvp(event.getId(), u.getId(), status);
                         rsvpRepo.save(r);
                     }
                 }
             } catch (Exception e) {
                 System.out.println("Seeding error: " + e.getMessage());
                 e.printStackTrace();
+                // swallow the exception so the app keeps running and logs are visible
             }
         };
     }
