@@ -26,11 +26,7 @@ import com.zaxxer.hikari.HikariDataSource;
 @EnableScheduling
 public class UwhAppApplication {
 
-    private final AuthService authService;
-
-    UwhAppApplication(AuthService authService) {
-        this.authService = authService;
-    }
+    // NO constructor injection here — prevents early dependency cycles
 
     public static void main(String[] args) {
         System.out.println("=== ENV at startup ===");
@@ -54,22 +50,19 @@ public class UwhAppApplication {
         String username = null;
         String password = null;
 
-        // 1) Highest priority: explicit SPRING_DATASOURCE_* envs (user-friendly in PaaS)
         jdbcUrl = System.getenv("SPRING_DATASOURCE_URL");
         username = System.getenv("SPRING_DATASOURCE_USERNAME");
         password = System.getenv("SPRING_DATASOURCE_PASSWORD");
 
-        // 2) If not explicit, try DATABASE_URL commonly provided by Railway/Heroku
         if (jdbcUrl == null) {
             String dbUrl = System.getenv("DATABASE_URL");
             if (dbUrl != null) {
-                // If it's already a JDBC URL, use it directly
                 if (dbUrl.startsWith("jdbc:")) {
                     jdbcUrl = dbUrl;
                 } else if (dbUrl.startsWith("postgres://")) {
                     try {
                         URI uri = new URI(dbUrl);
-                        String userInfo = uri.getUserInfo(); // user:pass
+                        String userInfo = uri.getUserInfo();
                         if (userInfo != null) {
                             String[] parts = userInfo.split(":", 2);
                             username = parts[0];
@@ -77,7 +70,7 @@ public class UwhAppApplication {
                         }
                         String host = uri.getHost();
                         int port = uri.getPort();
-                        String path = uri.getPath(); // includes leading '/'
+                        String path = uri.getPath();
                         jdbcUrl = "jdbc:postgresql://" + host + (port != -1 ? ":" + port : "") + path;
                     } catch (Exception e) {
                         System.err.println("Failed to parse DATABASE_URL: " + e.getMessage());
@@ -87,15 +80,12 @@ public class UwhAppApplication {
             }
         }
 
-        // 3) As a last resort, check if Spring system properties were set (e.g. via previous code),
-        //    or PGUSER/PGPASSWORD envs.
         if (jdbcUrl == null) jdbcUrl = System.getProperty("spring.datasource.url");
         if (username == null) username = System.getProperty("spring.datasource.username");
         if (password == null) password = System.getProperty("spring.datasource.password");
         if (username == null) username = System.getenv("PGUSER");
         if (password == null) password = System.getenv("PGPASSWORD");
 
-        // 4) Fallback to in-memory H2 if nothing found (keeps app running locally)
         if (jdbcUrl == null || jdbcUrl.isBlank()) {
             System.out.println("No JDBC URL found in env; falling back to H2 in-memory database.");
             jdbcUrl = "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false";
@@ -110,7 +100,6 @@ public class UwhAppApplication {
         if (username != null) cfg.setUsername(username);
         if (password != null) cfg.setPassword(password);
 
-        // Conservative pool settings for small PaaS instances
         cfg.setMaximumPoolSize(5);
         cfg.setMinimumIdle(1);
         cfg.setIdleTimeout(10_000);
@@ -120,9 +109,16 @@ public class UwhAppApplication {
         return new HikariDataSource(cfg);
     }
 
-    // Seed some sample users and an event for quick testing (safe: catches exceptions)
+    /**
+     * Seed data. AuthService is injected *here* (method param) — this avoids creating
+     * the AuthService (and its repo dependencies) during configuration class construction,
+     * breaking the circular dependency.
+     */
     @Bean
-    CommandLineRunner seedData(UserRepository userRepo, EventRepository eventRepo, RsvpRepository rsvpRepo) {
+    CommandLineRunner seedData(UserRepository userRepo,
+                               EventRepository eventRepo,
+                               RsvpRepository rsvpRepo,
+                               AuthService authService) {
         return args -> {
             try {
                 if (userRepo.count() == 0) {
@@ -162,7 +158,6 @@ public class UwhAppApplication {
             } catch (Exception e) {
                 System.err.println("Seeding error: " + e.getMessage());
                 e.printStackTrace();
-                // swallow so the app keeps running and logs are visible
             }
         };
     }
