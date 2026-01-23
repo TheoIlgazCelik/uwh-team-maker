@@ -1,0 +1,96 @@
+<!-- src/main/resources/static/index.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>UWH — RSVP & Teams</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; padding: 18px; max-width: 900px; }
+    .card { border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 6px; }
+    label { display:block; margin-top:8px; }
+    button { margin-top: 8px; }
+    .inline { display:inline-block; margin-right:8px; }
+    .teams { margin-top:12px; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <h1>UWH Organizer (MVP)</h1>
+
+  <div id="auth" class="card">
+    <h2>Account</h2>
+
+    <div id="not-logged-in">
+      <div style="display:flex; gap:24px;">
+        <div style="flex:1">
+          <h3>Register</h3>
+          <label>Name <input id="reg-name" /></label>
+          <label>Email <input id="reg-email" /></label>
+          <label>Password <input id="reg-password" type="password" /></label>
+          <button onclick="register()">Create account</button>
+          <div id="reg-msg"></div>
+        </div>
+
+        <div style="flex:1">
+          <h3>Login</h3>
+          <label>Email <input id="login-email" /></label>
+          <label>Password <input id="login-password" type="password" /></label>
+          <button onclick="login()">Log in</button>
+          <div id="login-msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="logged-in" class="hidden">
+      <div>
+        Logged in as: <strong id="who"></strong>
+        <button onclick="logout()">Log out</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="events-card" class="card">
+  <h2>Events</h2>
+  <div>
+    <button onclick="fetchEvents()">Refresh events</button>
+    <!-- give this button an id so we can hide it for non-admins -->
+    <button id="create-event-btn" onclick="createEventPrompt()">Create event</button>
+    <button id="create-recurring-btn" onclick="createRecurringNow()">Create Thu/Sun events now (manual trigger)</button>
+  </div>
+  <div id="events-list"></div>
+</div>
+
+  <div id="admin-panel" class="card hidden">
+  <h2>Admin Panel</h2>
+  <button onclick="fetchAllUsers()">Refresh users</button>
+  <div id="admin-users"></div>
+
+  <h3>Create event (admin)</h3>
+  <label>Title <input id="admin-event-title"/></label>
+  <label>Start time (ISO) <input id="admin-event-start"/></label>
+  <button onclick="adminCreateEvent()">Create event</button>
+</div>
+
+
+  <div id="teams-card" class="card hidden">
+    <h2>Generate Teams</h2>
+    <label>Team size <input id="team-size" type="number" value="5" min="2" /></label>
+    <label>
+      Method:
+      <select id="team-method">
+        <option value="random">Random</option>
+        <option value="balanced">Balanced</option>
+      </select>
+    </label>
+    <div>
+      <label>Pick an event:
+        <select id="event-select"></select>
+      </label>
+    </div>
+    <button onclick="generateTeams()">Generate teams</button>
+    <div id="teams-container" class="teams"></div>
+  </div>
+
+<script src="index.js"></script>
+</body>
+</html>
