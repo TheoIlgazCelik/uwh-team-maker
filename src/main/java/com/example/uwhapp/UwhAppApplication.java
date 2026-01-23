@@ -1,6 +1,7 @@
 package com.example.uwhapp;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -61,7 +62,7 @@ public class UwhAppApplication {
             Event event = eventRepo.findAll().get(0);
 
             // get all users
-            var users = userRepo.findAll();
+            List<User> users = userRepo.findAll();
 
             // create sample RSVPs
             for (int i = 0; i < users.size(); i++) {
