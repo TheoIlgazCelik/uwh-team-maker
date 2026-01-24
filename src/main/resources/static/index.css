@@ -1,0 +1,201 @@
+/* ---------- Theme Colors ---------- */
+:root {
+    --navy: #002346;
+    --navy-light: #142f4c;
+    --gold: #d4af37;
+    --gold-light: #f1d77a;
+    --bg: #f7f9fc;
+    --text-dark: #1a1a1a;
+    --border: #dce3ec;
+}
+
+/* ---------- Base Layout ---------- */
+body {
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    padding: 24px;
+    max-width: 900px;
+    margin: auto;
+}
+
+h1 {
+    color: var(--navy);
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 0.5px;
+}
+
+h2,
+h3 {
+    color: var(--navy-light);
+    margin-bottom: 10px;
+}
+
+/* ---------- Cards ---------- */
+.card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ---------- Forms ---------- */
+label {
+    display: block;
+    margin-top: 12px;
+    font-size: 0.95rem;
+    color: var(--navy);
+}
+
+input,
+select {
+    width: 100%;
+    padding: 8px 10px;
+    margin-top: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25);
+}
+
+/* ---------- Buttons ---------- */
+button {
+    background: var(--navy);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: var(--navy-light);
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* Gold / Primary Buttons */
+#create-event-btn,
+#create-recurring-btn,
+.primary-btn {
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 600;
+}
+
+#create-event-btn:hover,
+#create-recurring-btn:hover,
+.primary-btn:hover {
+    background: var(--gold-light);
+}
+
+/* ---------- Inline Layout ---------- */
+.inline {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+/* ---------- Auth Section ---------- */
+#auth h3 {
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+}
+
+#who {
+    color: var(--gold);
+}
+
+/* ---------- Events ---------- */
+#events-list>div {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+#events-list>div:last-child {
+    border-bottom: none;
+}
+
+/* ---------- Teams ---------- */
+.teams {
+    margin-top: 16px;
+}
+
+.teams>div {
+    background: #fdfcf7;
+    border: 1px solid var(--gold-light);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+/* ---------- Admin Panel ---------- */
+#admin-panel {
+    border-left: 5px solid var(--gold);
+}
+
+#admin-users>div {
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 0.9rem;
+}
+
+/* ---------- Messages ---------- */
+#reg-msg,
+#login-msg {
+    margin-top: 6px;
+    font-size: 0.85rem;
+}
+
+.success {
+    color: #1e7e34;
+}
+
+.error {
+    color: #c82333;
+}
+
+/* ---------- Utility ---------- */
+.hidden {
+    display: none;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 700px) {
+    body {
+        padding: 14px;
+    }
+
+    h1 {
+        font-size: 1.6rem;
+    }
+
+    .card {
+        padding: 14px;
+    }
+
+    button {
+        width: 100%;
+    }
+}

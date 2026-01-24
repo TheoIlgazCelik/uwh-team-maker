@@ -26,7 +26,7 @@ public class ScheduledEventCreator {
     // ===============================
     // THURSDAY — 7:30 PM
     // ===============================
-    @Scheduled(cron = "0 30 19 ? * THU", zone = "Pacific/Auckland")
+    @Scheduled(cron = "0 0 6 ? * *", zone = "Pacific/Auckland")
     public void createThursdayEvent() {
         createIfNotExists("UWH Session (Thursday)", getNextThursdayAt(19, 30));
     }
@@ -34,7 +34,7 @@ public class ScheduledEventCreator {
     // ===============================
     // SUNDAY — 4:30 PM
     // ===============================
-    @Scheduled(cron = "0 30 16 ? * SUN", zone = "Pacific/Auckland")
+    @Scheduled(cron = "0 0 6 ? * *", zone = "Pacific/Auckland")
     public void createSundayEvent() {
         createIfNotExists("UWH Session (Sunday)", getNextSundayAt(16, 30));
     }
