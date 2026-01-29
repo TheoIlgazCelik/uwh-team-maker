@@ -38,6 +38,8 @@ public class UwhAppApplication {
 
         SpringApplication.run(UwhAppApplication.class, args);
         System.out.println("✅ Spring Boot started successfully!");
+        System.out.println("http://localhost:8080/");
+        System.out.println("https://uwh-team-maker-production.up.railway.app/");
     }
 
     /**
