@@ -90,7 +90,7 @@ public class UwhAppApplication {
 
         if (jdbcUrl == null || jdbcUrl.isBlank()) {
             System.out.println("No JDBC URL found in env; falling back to H2 in-memory database.");
-            jdbcUrl = "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false";
+            jdbcUrl = "jdbc:h2:mem:uwhdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false";
             if (username == null) username = "sa";
             if (password == null) password = "";
         } else {

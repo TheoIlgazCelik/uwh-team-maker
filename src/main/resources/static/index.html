@@ -42,26 +42,43 @@
   </div>
 
   <div id="events-card" class="card">
-  <h2>Events</h2>
-  <div>
-    <button onclick="fetchEvents()">Refresh events</button>
-    <!-- give this button an id so we can hide it for non-admins -->
-    <button id="create-event-btn" onclick="createEventPrompt()">Create event</button>
-    <button id="create-recurring-btn" onclick="createRecurringNow()">Create Thu/Sun events now (manual trigger)</button>
+    <h2>Events</h2>
+
+    <div>
+      <button onclick="fetchEvents()">Refresh events</button>
+      <!-- give this button an id so we can hide it for non-admins -->
+      <button id="create-event-btn" onclick="createEventPrompt()">Create event</button>
+      <button id="create-recurring-btn" onclick="createRecurringNow()">Create Thu/Sun events now (manual trigger)</button>
+    </div>
+
+    <!-- Controls for separating upcoming vs past -->
+    <div id="events-controls" style="margin-top:12px;">
+      <label>
+        Show past events:
+        <button id="toggle-past-btn" onclick="togglePast()">Hide past events</button>
+      </label>
+    </div>
+
+    <h3>Upcoming events</h3>
+    <div id="upcoming-events-list"></div>
+
+    <h3>
+      Past events
+      <small id="past-summary" style="margin-left:8px;color:#666;"></small>
+    </h3>
+    <div id="past-events-list" class="hidden"></div>
   </div>
-  <div id="events-list"></div>
-</div>
 
   <div id="admin-panel" class="card hidden">
-  <h2>Admin Panel</h2>
-  <button onclick="fetchAllUsers()">Refresh users</button>
-  <div id="admin-users"></div>
+    <h2>Admin Panel</h2>
+    <button onclick="fetchAllUsers()">Refresh users</button>
+    <div id="admin-users"></div>
 
-  <h3>Create event (admin)</h3>
-  <label>Title <input id="admin-event-title"/></label>
-  <label>Start time (ISO) <input id="admin-event-start"/></label>
-  <button onclick="adminCreateEvent()">Create event</button>
-</div>
+    <h3>Create event (admin)</h3>
+    <label>Title <input id="admin-event-title"/></label>
+    <label>Start time (ISO) <input id="admin-event-start"/></label>
+    <button onclick="adminCreateEvent()">Create event</button>
+  </div>
 
 
   <div id="teams-card" class="card hidden">

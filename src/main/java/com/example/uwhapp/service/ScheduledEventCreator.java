@@ -93,7 +93,7 @@ public class ScheduledEventCreator {
 
         return next.toInstant();
     }
-    public void createEventNow() { String title = "UWH Session (auto)"; String location = "Local Pool"; Instant start = Instant.now().plusSeconds(60 * 60); // one hour from now 
+    public void createEventNow() { String title = "UWH Session (auto)"; String location = "Local Pool"; Instant start = Instant.now();
     Event e = new Event(); 
     e.setTitle(title); 
     e.setLocation(location); 

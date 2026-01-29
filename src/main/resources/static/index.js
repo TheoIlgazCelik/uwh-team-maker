@@ -3,6 +3,7 @@
 const apiBase = window.location.origin; // same origin since served from Spring Boot
 let currentUser = null;
 let currentToken = localStorage.getItem('uwh_token') || null;
+let pastVisible = false; // whether past events are shown
 
 // --- helper fetch with token if present
 async function api(path, options = {}) {
@@ -104,43 +105,153 @@ function logout() {
   setAdminUI(false);
 }
 
+// --- helper: format date nicely (falls back to raw string)
+function formatStart(iso) {
+  if (!iso) return '(no time)';
+  const t = Date.parse(iso);
+  if (isNaN(t)) return iso;
+  const d = new Date(t);
+  return d.toLocaleString(); // client local representation
+}
+
+// helper to create event DOM node (keeps consistent UI)
+function createEventDiv(ev) {
+  const div = document.createElement('div');
+  div.className = 'event-item';
+  const when = ev.startTime ? formatStart(ev.startTime) : '(no time)';
+  const location = ev.location ? ' — ' + ev.location : '';
+  div.innerHTML = `<strong>${ev.title}</strong> — ${when}${location}`;
+  div.appendChild(document.createElement('br'));
+
+  // RSVP buttons
+  const yesBtn = document.createElement('button');
+  yesBtn.innerText = 'Yes';
+  yesBtn.onclick = () => rsvp(ev.id, 'yes');
+  const noBtn = document.createElement('button');
+  noBtn.innerText = 'No';
+  noBtn.onclick = () => rsvp(ev.id, 'no');
+  div.appendChild(yesBtn);
+  div.appendChild(noBtn);
+
+  // attendees
+  const attendeesBtn = document.createElement('button');
+  attendeesBtn.innerText = 'Show attendees';
+  attendeesBtn.onclick = () => showAttendees(ev.id);
+  div.appendChild(attendeesBtn);
+
+  // admin quick-edit: if current user is admin, show simple edit/delete links (optional)
+  if (currentUser && currentUser.isAdmin) {
+    const editBtn = document.createElement('button');
+    editBtn.innerText = 'Edit (admin)';
+    editBtn.onclick = async () => {
+      const newTitle = prompt('New title', ev.title);
+      if (!newTitle) return;
+      try {
+        await api(`/admin/events/${ev.id}`, { method: 'PUT', body: JSON.stringify({ title: newTitle }) });
+        await fetchEvents();
+      } catch (e) {
+        alert('Edit failed: ' + e.message);
+      }
+    };
+    const delBtn = document.createElement('button');
+    delBtn.innerText = 'Delete (admin)';
+    delBtn.onclick = async () => {
+      if (!confirm('Delete event?')) return;
+      try {
+        await api(`/admin/events/${ev.id}`, { method: 'DELETE' });
+        await fetchEvents();
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
+      }
+    };
+    div.appendChild(editBtn);
+    div.appendChild(delBtn);
+  }
+
+  return div;
+}
+
+// toggle past visibility
+function togglePast() {
+  pastVisible = !pastVisible;
+  const list = document.getElementById('past-events-list');
+  const btn = document.getElementById('toggle-past-btn');
+  if (pastVisible) {
+    list.classList.remove('hidden');
+    btn.innerText = 'Hide past events';
+  } else {
+    list.classList.add('hidden');
+    btn.innerText = 'Show past events';
+  }
+}
+
 // --- events UI
 async function fetchEvents() {
   try {
-    const events = await api('/events', { method: 'GET' });
-    const list = document.getElementById('events-list');
+    const events = await api('/events', { method: 'GET' }) || [];
+    const upcomingList = document.getElementById('upcoming-events-list');
+    const pastList = document.getElementById('past-events-list');
     const select = document.getElementById('event-select');
-    if (list) list.innerHTML = '';
+    if (upcomingList) upcomingList.innerHTML = '';
+    if (pastList) pastList.innerHTML = '';
     if (select) select.innerHTML = '<option value="">(pick)</option>';
+
+    const now = Date.now();
+    const upcoming = [];
+    const past = [];
+
     events.forEach(ev => {
-      const div = document.createElement('div');
-      div.innerHTML = `<strong>${ev.title}</strong> — ${ev.location || ''} — ${ev.startTime || ''}`;
-      // RSVP buttons (visible to users)
-      const yesBtn = document.createElement('button');
-      yesBtn.innerText = 'Yes';
-      yesBtn.onclick = () => rsvp(ev.id, 'yes');
-      const noBtn = document.createElement('button');
-      noBtn.innerText = 'No';
-      noBtn.onclick = () => rsvp(ev.id, 'no');
-      div.appendChild(document.createElement('br'));
-      div.appendChild(yesBtn);
-      div.appendChild(noBtn);
+      let startMillis = NaN;
+      if (ev.startTime) {
+        startMillis = Date.parse(ev.startTime);
+      }
+      // If startTime is invalid or missing, treat as upcoming (put at end)
+      if (!isNaN(startMillis) && startMillis < now) {
+        past.push(Object.assign({}, ev, { _startMillis: startMillis }));
+      } else {
+        upcoming.push(Object.assign({}, ev, { _startMillis: isNaN(startMillis) ? Number.POSITIVE_INFINITY : startMillis }));
+      }
+    });
 
-      // show attendees count (quick)
-      const attendeesBtn = document.createElement('button');
-      attendeesBtn.innerText = 'Show attendees';
-      attendeesBtn.onclick = () => showAttendees(ev.id);
-      div.appendChild(attendeesBtn);
+    // Sort upcoming ascending (soonest first), past descending (most recent past first)
+    upcoming.sort((a, b) => a._startMillis - b._startMillis);
+    past.sort((a, b) => b._startMillis - a._startMillis);
 
-      if (list) list.appendChild(div);
+    // render upcoming
+    upcoming.forEach(ev => {
+      const div = createEventDiv(ev);
+      if (upcomingList) upcomingList.appendChild(div);
 
+      // add upcoming events to select for teams
       if (select) {
         const opt = document.createElement('option');
         opt.value = ev.id;
-        opt.innerText = ev.title + ' (' + ev.startTime + ')';
+        opt.innerText = ev.title + ' (' + (ev.startTime ? formatStart(ev.startTime) : 'no time') + ')';
         select.appendChild(opt);
       }
     });
+
+    // render past
+    past.forEach(ev => {
+      const div = createEventDiv(ev);
+      if (pastList) pastList.appendChild(div);
+    });
+
+    // update past summary count
+    const pastSummary = document.getElementById('past-summary');
+    if (pastSummary) pastSummary.innerText = `${past.length} past event${past.length === 1 ? '' : 's'}`;
+
+    // ensure past visibility state respected
+    const listElem = document.getElementById('past-events-list');
+    const btn = document.getElementById('toggle-past-btn');
+    if (pastVisible) {
+      listElem.classList.remove('hidden');
+      btn.innerText = 'Hide past events';
+    } else {
+      listElem.classList.add('hidden');
+      btn.innerText = 'Show past events';
+    }
+
   } catch (e) {
     console.error('fetchEvents', e);
   }
@@ -155,7 +266,7 @@ async function createEventPrompt() {
   const title = prompt('Title for the event', 'UWH Session');
   if (!title) return;
   const location = prompt('Location', 'Local Pool');
-  const startTime = prompt('Start time (ISO instant or leave blank)', '');
+  const startTime = prompt('Start time (ISO) — e.g. 2026-02-01T19:00:00Z (leave blank)', '');
   const body = { title, location };
   if (startTime) body.startTime = startTime;
   try {
