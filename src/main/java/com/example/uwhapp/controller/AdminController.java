@@ -1,5 +1,27 @@
 package com.example.uwhapp.controller;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.example.uwhapp.model.Event;
 import com.example.uwhapp.model.Rsvp;
 import com.example.uwhapp.model.User;
@@ -7,14 +29,7 @@ import com.example.uwhapp.repository.EventRepository;
 import com.example.uwhapp.repository.RsvpRepository;
 import com.example.uwhapp.repository.UserRepository;
 import com.example.uwhapp.service.AuthService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import com.example.uwhapp.service.TeamService;
 
 @RestController
 @RequestMapping("/admin")
@@ -24,15 +39,17 @@ public class AdminController {
     private final EventRepository eventRepo;
     private final RsvpRepository rsvpRepo;
     private final AuthService authService;
+    private final TeamService teamService;
 
     public AdminController(UserRepository userRepo,
                            EventRepository eventRepo,
                            RsvpRepository rsvpRepo,
-                           AuthService authService) {
+                           AuthService authService, TeamService teamService) {
         this.userRepo = userRepo;
         this.eventRepo = eventRepo;
         this.rsvpRepo = rsvpRepo;
         this.authService = authService;
+        this.teamService = teamService;
     }
 
     // helper - require admin from token, throws 403 if not admin
@@ -118,6 +135,56 @@ public class AdminController {
         List<Rsvp> rsvps = rsvpRepo.findByEventId(eventId);
         return ResponseEntity.ok(rsvps);
     }
+    // Admin update event (used by your front-end edit button)
+    @PutMapping("/events/{eventId}")
+    public ResponseEntity<?> adminUpdateEvent(@PathVariable("eventId") Long eventId,
+            @RequestBody Map<String, Object> body) {
+        try {
+            Optional<Event> oe = eventRepo.findById(eventId);
+            if (oe.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "event not found"));
+            }
+            Event e = oe.get();
+            if (body.containsKey("title")) {
+                e.setTitle(Objects.toString(body.get("title"), e.getTitle()));
+            }
+            if (body.containsKey("location")) {
+                e.setLocation(Objects.toString(body.get("location"), e.getLocation()));
+            }
+            if (body.containsKey("startTime")) {
+                String s = Objects.toString(body.get("startTime"), "");
+                if (s != null && !s.isBlank()) {
+                    try {
+                        e.setStartTime(Instant.parse(s));
+                    } catch (Exception ex) {
+                        // ignore malformed startTime and return bad request
+                        return ResponseEntity.badRequest().body(Map.of("error", "startTime must be an ISO instant, e.g. 2026-01-23T18:00:00Z"));
+                    }
+                }
+            }
+            Event saved = eventRepo.save(e);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+// Admin delete event (will also delete any saved teams via TeamService)
+    @DeleteMapping("/events/{eventId}")
+    public ResponseEntity<?> adminDeleteEvent(@PathVariable("eventId") Long eventId) {
+        try {
+            // remove saved teams & members first
+            teamService.deleteTeamsForEvent(eventId);
+            // then delete event
+            eventRepo.deleteById(eventId);
+            return ResponseEntity.noContent().build();
+        } catch (EmptyResultDataAccessException ex) {
+            return ResponseEntity.status(404).body(Map.of("error", "event not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
 
     // other admin endpoints you can add later:
     // - promote/demote admin flag

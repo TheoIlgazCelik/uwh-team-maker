@@ -139,6 +139,18 @@ function createEventDiv(ev) {
   attendeesBtn.onclick = () => showAttendees(ev.id);
   div.appendChild(attendeesBtn);
 
+  // show saved teams (admin view)
+  const showTeamsBtn = document.createElement('button');
+  showTeamsBtn.innerText = 'Show saved teams';
+  // add a console.log so we can confirm the click fired
+  showTeamsBtn.onclick = () => {
+    console.log('Show saved teams clicked for event', ev.id);
+    showSavedTeams(ev.id);
+  };
+  // show only for admins (keeps current UX)
+  if (currentUser && currentUser.isAdmin) div.appendChild(showTeamsBtn);
+
+
   // admin quick-edit: if current user is admin, show simple edit/delete links (optional)
   if (currentUser && currentUser.isAdmin) {
     const editBtn = document.createElement('button');
@@ -229,6 +241,7 @@ async function fetchEvents() {
         opt.innerText = ev.title + ' (' + (ev.startTime ? formatStart(ev.startTime) : 'no time') + ')';
         select.appendChild(opt);
       }
+
     });
 
     // render past
@@ -397,6 +410,65 @@ async function adminCreateEvent() {
     await fetchEvents();
   } catch (e) {
     alert('create event failed: ' + e.message);
+  }
+}
+async function showSavedTeams(eventId) {
+  console.log('showSavedTeams called for eventId=', eventId);
+  try {
+    // call server
+    const teams = await api(`/events/${eventId}/teams`, { method: 'GET' });
+    console.log('teams response:', teams);
+
+    // ensure container exists
+    const c = document.getElementById('teams-container');
+    if (!c) {
+      console.warn('teams-container element not found in DOM');
+      alert('UI error: cannot find teams container (element id="teams-container")');
+      return;
+    }
+
+    // clear previous contents
+    c.innerHTML = '';
+
+    // handle empty response
+    if (!teams || teams.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'card';
+      emptyDiv.innerText = 'No saved teams for this event';
+      c.appendChild(emptyDiv);
+      alert('No saved teams for this event');
+      return;
+    }
+
+    // render teams
+    teams.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      // friendly member text: Name (skill: X)
+      const members = (t.members || []).map(m => {
+        const name = m.name || ('id:' + (m.id || '?'));
+        const skill = typeof m.skill === 'number' ? m.skill : (m.skill ? m.skill : 0);
+        return `${name} (skill: ${skill})`;
+      }).join(', ');
+      div.innerHTML = `<strong>Team ${t.teamIndex || '?'}</strong><div>${members}</div>`;
+      c.appendChild(div);
+    });
+
+    // ensure admin teams panel is visible
+    setVisible('teams-card', true);
+
+    // select the event in the team-select dropdown (nice UX)
+    const select = document.getElementById('event-select');
+    if (select) select.value = String(eventId);
+
+    // scroll into view a little so user sees results
+    c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (e) {
+    console.error('showSavedTeams error', e);
+    // unwrap error message where possible
+    const msg = (e && e.message) ? e.message : String(e);
+    alert('Failed to load teams: ' + msg);
   }
 }
 

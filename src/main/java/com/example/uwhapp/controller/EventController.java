@@ -1,5 +1,22 @@
 package com.example.uwhapp.controller;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.uwhapp.dto.GenerateTeamsRequest;
 import com.example.uwhapp.dto.RsvpRequest;
 import com.example.uwhapp.model.Event;
@@ -10,12 +27,6 @@ import com.example.uwhapp.repository.UserRepository;
 import com.example.uwhapp.service.RsvpService;
 import com.example.uwhapp.service.ScheduledEventCreator;
 import com.example.uwhapp.service.TeamService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/events")
@@ -28,10 +39,10 @@ public class EventController {
     private final ScheduledEventCreator scheduledEventCreator;
 
     public EventController(RsvpService rsvpService,
-                           TeamService teamService,
-                           UserRepository userRepository,
-                           EventRepository eventRepository,
-                           ScheduledEventCreator scheduledEventCreator) {
+            TeamService teamService,
+            UserRepository userRepository,
+            EventRepository eventRepository,
+            ScheduledEventCreator scheduledEventCreator) {
         this.rsvpService = rsvpService;
         this.teamService = teamService;
         this.userRepository = userRepository;
@@ -70,15 +81,23 @@ public class EventController {
             String title = null;
             String startTimeStr = null;
 
-            if (body.containsKey("title")) title = Objects.toString(body.get("title"), null);
-            if (body.containsKey("startTime")) startTimeStr = Objects.toString(body.get("startTime"), null);
+            if (body.containsKey("title")) {
+                title = Objects.toString(body.get("title"), null);
+            }
+            if (body.containsKey("startTime")) {
+                startTimeStr = Objects.toString(body.get("startTime"), null);
+            }
 
             // fallback keys
-            if (title == null && body.containsKey("name")) title = Objects.toString(body.get("name"), null);
-            if (startTimeStr == null && body.containsKey("date")) startTimeStr = Objects.toString(body.get("date"), null);
+            if (title == null && body.containsKey("name")) {
+                title = Objects.toString(body.get("name"), null);
+            }
+            if (startTimeStr == null && body.containsKey("date")) {
+                startTimeStr = Objects.toString(body.get("date"), null);
+            }
 
             if (title == null) {
-                Map<String,Object> err = new HashMap<>();
+                Map<String, Object> err = new HashMap<>();
                 err.put("error", "title (or name) is required");
                 return ResponseEntity.badRequest().body(err);
             }
@@ -91,7 +110,7 @@ public class EventController {
                 try {
                     startInstant = Instant.parse(startTimeStr);
                 } catch (Exception ex) {
-                    Map<String,Object> err = new HashMap<>();
+                    Map<String, Object> err = new HashMap<>();
                     err.put("error", "startTime must be an ISO instant, e.g. 2026-01-23T18:00:00Z");
                     return ResponseEntity.badRequest().body(err);
                 }
@@ -106,15 +125,19 @@ public class EventController {
             if (body.containsKey("createdBy")) {
                 try {
                     Object cb = body.get("createdBy");
-                    if (cb instanceof Number) e.setCreatedBy(((Number) cb).longValue());
-                    else e.setCreatedBy(Long.parseLong(cb.toString()));
-                } catch (Exception ignored) { /* leave createdBy null */ }
+                    if (cb instanceof Number) {
+                        e.setCreatedBy(((Number) cb).longValue()); 
+                    }else {
+                        e.setCreatedBy(Long.parseLong(cb.toString()));
+                    }
+                } catch (Exception ignored) {
+                    /* leave createdBy null */ }
             }
 
             Event saved = eventRepository.save(e);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
-            Map<String,Object> err = new HashMap<>();
+            Map<String, Object> err = new HashMap<>();
             err.put("error", e.getMessage());
             return ResponseEntity.status(500).body(err);
         }
@@ -169,8 +192,23 @@ public class EventController {
     public ResponseEntity<?> attendees(@PathVariable("eventId") Long eventId) {
         List<Rsvp> yes = rsvpService.findYesForEvent(eventId);
         List<Long> ids = yes.stream().map(Rsvp::getUserId).collect(Collectors.toList());
-        if (ids.isEmpty()) return ResponseEntity.ok(Collections.emptyList());
+        if (ids.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
         List<User> users = userRepository.findAllById(ids);
         return ResponseEntity.ok(users);
     }
+
+    @GetMapping("/{eventId}/teams")
+    public ResponseEntity<?> getSavedTeams(@PathVariable("eventId") Long eventId) {
+        try {
+            List<Map<String, Object>> teams = teamService.getSavedTeams(eventId);
+            return ResponseEntity.ok(teams);
+        } catch (Exception e) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(err);
+        }
+    }
+
 }
