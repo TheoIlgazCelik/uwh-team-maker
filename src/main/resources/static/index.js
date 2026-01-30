@@ -472,6 +472,112 @@ async function showSavedTeams(eventId) {
   }
 }
 
+async function subscribeUser(publicVapidKeyBase64Url) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('Push not supported');
+    return;
+  }
+
+  const swReg = await navigator.serviceWorker.register('/sw.js');
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') throw new Error('permission not granted');
+
+  const convertedKey = urlBase64ToUint8Array(publicVapidKeyBase64Url);
+
+  const sub = await swReg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: convertedKey
+  });
+
+  // send subscription to server
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sub)
+  });
+
+  return sub;
+}
+
+/* helper */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+  return output;
+}
+// after showing logged-in user, request public key and subscribe
+async function ensureSubscribed() {
+  try {
+    const res = await fetch('/api/push/vapidPublicKey');
+    if (!res.ok) return;
+    const data = await res.json();
+    const publicKey = data.publicKey;
+    await subscribeUser(publicKey);
+    console.log('Subscribed to push service');
+  } catch (e) {
+    console.warn('subscribe error', e);
+  }
+}
+
+// call this from a button or after login if you want user to opt-in interactively
+async function subscribeToPush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    alert("Push / Service Worker not supported in this browser");
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register("/sw.js");
+    console.log("Service worker registered");
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      alert("Notifications blocked");
+      return;
+    }
+
+    // Use your VAPID key (you already use this pattern elsewhere)
+    const publicKeyResp = await fetch('/api/push/vapidPublicKey');
+    if (!publicKeyResp.ok) {
+      console.warn('Could not fetch VAPID public key');
+      return;
+    }
+    const { publicKey } = await publicKeyResp.json();
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+
+    console.log("Push subscription:", subscription);
+
+    // POST to your backend subscription endpoint (include auth token if available)
+    const headers = { 'Content-Type': 'application/json' };
+    if (currentToken) headers['X-Auth-Token'] = currentToken;
+
+    const res = await fetch('/api/subscriptions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(subscription)
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(res.status + ' ' + text);
+    }
+
+    alert("Subscribed to notifications!");
+  } catch (err) {
+    console.error("subscribeToPush error:", err);
+    alert("Subscription failed: " + err.message);
+  }
+}
+
+
+
 // On load: if token present, try to fetch /auth/me
 (async function init() {
   // hide admin pieces by default until we know user's role
@@ -487,6 +593,10 @@ async function showSavedTeams(eventId) {
         setAdminUI(false);
       }
       showLoggedIn(currentUser);
+      // call when user logs in or when page init sees user is logged in
+      if (currentUser) {
+        ensureSubscribed().catch(err => console.warn('subscribe failed', err));
+      }
     } catch (e) {
       // invalid token
       localStorage.removeItem('uwh_token');

@@ -1,13 +1,18 @@
 <!-- src/main/resources/static/index.html -->
 <!doctype html>
 <html>
+
 <head>
-  <meta charset="utf-8"/>
+  <meta charset="utf-8" />
   <title>UWH — RSVP & Teams</title>
   <link rel="stylesheet" href="index.css">
+  <link rel"manifest" href="/manifest.json">
 </head>
+
 <body>
   <h1>UWH Organizer (MVP)</h1>
+  <button id="enable-notifs-btn" onclick="subscribeToPush()">Enable Notifications</button>
+
 
   <div id="auth" class="card">
     <h2>Account</h2>
@@ -48,7 +53,8 @@
       <button onclick="fetchEvents()">Refresh events</button>
       <!-- give this button an id so we can hide it for non-admins -->
       <button id="create-event-btn" onclick="createEventPrompt()">Create event</button>
-      <button id="create-recurring-btn" onclick="createRecurringNow()">Create Thu/Sun events now (manual trigger)</button>
+      <button id="create-recurring-btn" onclick="createRecurringNow()">Create Thu/Sun events now (manual
+        trigger)</button>
     </div>
 
     <!-- Controls for separating upcoming vs past -->
@@ -75,8 +81,8 @@
     <div id="admin-users"></div>
 
     <h3>Create event (admin)</h3>
-    <label>Title <input id="admin-event-title"/></label>
-    <label>Start time (ISO) <input id="admin-event-start"/></label>
+    <label>Title <input id="admin-event-title" /></label>
+    <label>Start time (ISO) <input id="admin-event-start" /></label>
     <button onclick="adminCreateEvent()">Create event</button>
   </div>
 
@@ -100,6 +106,7 @@
     <div id="teams-container" class="teams"></div>
   </div>
 
-<script src="index.js"></script>
+  <script src="index.js"></script>
 </body>
+
 </html>
