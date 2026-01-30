@@ -26,19 +26,21 @@ public class ScheduledPushSender {
     private final NotificationLogRepository notificationLogRepository;
     private final WebPushService webPushService;
     private final RsvpRepository rsvpRepository;
+    private final TeamService teamService;
 
     private static final ZoneId NZ_ZONE = ZoneId.of("Pacific/Auckland");
 
     public ScheduledPushSender(EventRepository eventRepository,
-                               SubscriptionRepository subscriptionRepository,
-                               NotificationLogRepository notificationLogRepository,
-                               WebPushService webPushService,
-                               RsvpRepository rsvpRepository) {
+            SubscriptionRepository subscriptionRepository,
+            NotificationLogRepository notificationLogRepository,
+            WebPushService webPushService,
+            RsvpRepository rsvpRepository, TeamService teamService) {
         this.eventRepository = eventRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.notificationLogRepository = notificationLogRepository;
         this.webPushService = webPushService;
         this.rsvpRepository = rsvpRepository;
+        this.teamService = teamService;
     }
 
     // run every 10 minutes in NZ time
@@ -68,6 +70,21 @@ public class ScheduledPushSender {
             // 2) One hour before event
             ZonedDateTime oneHourBefore = evtStart.minusHours(1).withSecond(0).withNano(0);
             if (isInWindow(prevRun, now, oneHourBefore)) {
+// --- Generate balanced teams (once) before sending hour-before notification
+                Optional<NotificationLog> teamsGenerated = notificationLogRepository.findByEventIdAndType(e.getId(), "TEAMS_GENERATED");
+                if (teamsGenerated.isEmpty()) {
+                    try {
+                        String method = "Balanced";
+
+                        System.out.println("Auto-generating teams for event" + e.getId() + "using method " +  method);
+                        teamService.generateAndSaveTeams(e.getId(), method);
+                        notificationLogRepository.save(new NotificationLog(e.getId(), "TEAMS_GENERATED"));
+                    } catch (Exception ex) {
+                        // ensure generation failure doesn't stop notifications
+                        System.out.println("Failed to generate teams for event " + e.getId() + "\nException : " + ex);
+                    }
+                }
+
                 Optional<NotificationLog> sent = notificationLogRepository.findByEventIdAndType(e.getId(), "HOUR_BEFORE");
                 if (sent.isEmpty()) {
                     sendHourBeforeNotification(e);
@@ -90,7 +107,7 @@ public class ScheduledPushSender {
     private void sendDayOfNotification(Event e) {
         List<Subscription> subs = subscriptionRepository.findAll();
         String payload = String.format("{\"title\":\"%s\",\"body\":\"RSVP for the event now\",\"url\":\"/events/%d\"}",
-                                       escapeJson(e.getTitle()), e.getId());
+                escapeJson(e.getTitle()), e.getId());
         for (Subscription s : subs) {
             webPushService.sendNotification(s, payload);
         }
@@ -114,7 +131,7 @@ public class ScheduledPushSender {
         }
 
         String payload = String.format("{\"title\":\"%s\",\"body\":\"Click this notification to see the teams\",\"url\":\"/events/%d\"}",
-                                       escapeJson(e.getTitle()), e.getId());
+                escapeJson(e.getTitle()), e.getId());
         for (Subscription s : subs) {
             webPushService.sendNotification(s, payload);
         }
