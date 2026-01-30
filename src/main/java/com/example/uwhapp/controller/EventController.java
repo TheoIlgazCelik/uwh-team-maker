@@ -161,11 +161,9 @@ public class EventController {
     public ResponseEntity<?> generateTeams(
             @PathVariable("eventId") Long eventId,
             @RequestBody GenerateTeamsRequest request) {
-
-        int teamSize = (request != null && request.getTeamSize() != null) ? request.getTeamSize() : 5;
         String method = (request != null && request.getMethod() != null) ? request.getMethod().toLowerCase() : "random";
 
-        List<List<User>> teams = teamService.generateAndSaveTeams(eventId, teamSize, method);
+        List<List<User>> teams = teamService.generateAndSaveTeams(eventId, method);
 
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = 0; i < teams.size(); i++) {

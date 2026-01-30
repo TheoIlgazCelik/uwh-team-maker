@@ -333,13 +333,12 @@ async function generateTeams() {
   }
   const eventId = document.getElementById('event-select').value;
   if (!eventId) { alert('Pick an event first'); return; }
-  const teamSize = parseInt(document.getElementById('team-size').value || '5', 10);
   const method = document.getElementById('team-method').value;
 
   try {
     const teams = await api(`/events/${eventId}/generate-teams`, {
       method: 'POST',
-      body: JSON.stringify({ teamSize, method })
+      body: JSON.stringify({ method })
     });
     const c = document.getElementById('teams-container');
     if (c) c.innerHTML = '';

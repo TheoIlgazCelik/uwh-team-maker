@@ -45,7 +45,7 @@ public class TeamService {
     }
 
     @Transactional
-    public List<List<User>> generateAndSaveTeams(Long eventId, int teamSize, String method) {
+    public List<List<User>> generateAndSaveTeams(Long eventId, String method) {
         List<Rsvp> yes = rsvpService.findYesForEvent(eventId);
         List<Long> userIds = yes.stream().map(Rsvp::getUserId).collect(Collectors.toList());
         if (userIds.isEmpty()) {
@@ -53,6 +53,11 @@ public class TeamService {
         }
 
         List<User> attendees = userRepo.findAllById(userIds);
+
+        // determine number of teams
+        int numPlayers = attendees.size();
+        int numTeams = (numPlayers > 21) ? 4 : 2;
+        int teamSize = numPlayers / numTeams;
         TeamGenerator generator = generators.getOrDefault(method, generators.get("random"));
         List<List<User>> teams = generator.makeTeams(attendees, teamSize);
 
