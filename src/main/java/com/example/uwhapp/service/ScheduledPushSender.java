@@ -130,8 +130,8 @@ public class ScheduledPushSender {
                     .collect(Collectors.toList());
         }
 
-        String payload = String.format("{\"title\":\"%s\",\"body\":\"Click this notification to see the teams\",\"url\":\"/events/%d\"}",
-                escapeJson(e.getTitle()), e.getId());
+        String payload = String.format("{\"title\":\"%s\",\"body\":\"Click this notification to see the teams\",\"url\":\"/"}",
+                escapeJson(e.getTitle()));
         for (Subscription s : subs) {
             webPushService.sendNotification(s, payload);
         }
