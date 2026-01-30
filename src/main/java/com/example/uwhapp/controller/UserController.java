@@ -27,7 +27,7 @@ public class UserController {
     @PostMapping("/users")
     public ResponseEntity<?> createUser(@RequestBody Map<String, String> body) {
         String name = body.get("name");
-        String email = body.get("email");
+        String email = body.get("email").toLowerCase();
         String password = body.get("password");
         if (name == null || email == null || password == null) return ResponseEntity.badRequest().body("name,email,password required");
         User u = authService.register(name, email, password);
@@ -36,7 +36,7 @@ public class UserController {
 
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
+        String email = body.get("email").toLowerCase();
         String password = body.get("password");
         if (email == null || password == null) return ResponseEntity.badRequest().body("email,password required");
         try {
@@ -55,7 +55,7 @@ public ResponseEntity<Map<String,Object>> me(@RequestHeader(value = "X-Auth-Toke
                 Map<String,Object> m = new HashMap<>();
                 m.put("id", u.getId());
                 m.put("name", u.getName());
-                m.put("email", u.getEmail());
+                m.put("email", u.getEmail().toLowerCase());
                 m.put("isAdmin", Boolean.TRUE.equals(u.getIsAdmin()));
                 return ResponseEntity.ok(m);
             })
