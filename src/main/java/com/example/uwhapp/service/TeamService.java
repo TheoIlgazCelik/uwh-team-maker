@@ -56,8 +56,13 @@ public class TeamService {
 
         // determine number of teams
         int numPlayers = attendees.size();
-        int numTeams = (numPlayers > 21) ? 4 : 2;
-        int teamSize = numPlayers / numTeams;
+        int numTeams;
+        if (numPlayers > 21){
+            numTeams = 4;
+        }else {
+            numTeams = 2;
+        }
+        int teamSize = (int) Math.ceil((double) numPlayers / numTeams);
         TeamGenerator generator = generators.getOrDefault(method, generators.get("random"));
         List<List<User>> teams = generator.makeTeams(attendees, teamSize);
 
