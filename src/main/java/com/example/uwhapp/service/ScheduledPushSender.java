@@ -41,11 +41,15 @@ public class ScheduledPushSender {
         this.rsvpRepository = rsvpRepository;
     }
 
-    // run every minute in NZ time
-    @Scheduled(cron = "0 * * * * *", zone = "Pacific/Auckland")
+    // run every 10 minutes in NZ time
+    @Scheduled(cron = "0 */10 * * * *", zone = "Pacific/Auckland")
     public void checkAndSend() {
         List<Event> events = eventRepository.findAll();
         ZonedDateTime now = ZonedDateTime.now(NZ_ZONE).withSecond(0).withNano(0);
+
+        final int INTERVAL_MINUTES = 10; // must match cron step
+        // Window: [prevRun, now] — include times from the last INTERVAL_MINUTES
+        ZonedDateTime prevRun = now.minusMinutes(INTERVAL_MINUTES);
 
         for (Event e : events) {
             if (e.getStartTime() == null) continue;
@@ -53,7 +57,7 @@ public class ScheduledPushSender {
 
             // 1) Day-of 10:00
             ZonedDateTime dayOf10 = evtStart.withHour(10).withMinute(0).withSecond(0).withNano(0);
-            if (isSameMinute(now, dayOf10)) {
+            if (isInWindow(prevRun, now, dayOf10)) {
                 Optional<NotificationLog> sent = notificationLogRepository.findByEventIdAndType(e.getId(), "DAY_OF_10AM");
                 if (sent.isEmpty()) {
                     sendDayOfNotification(e);
@@ -63,7 +67,7 @@ public class ScheduledPushSender {
 
             // 2) One hour before event
             ZonedDateTime oneHourBefore = evtStart.minusHours(1).withSecond(0).withNano(0);
-            if (isSameMinute(now, oneHourBefore)) {
+            if (isInWindow(prevRun, now, oneHourBefore)) {
                 Optional<NotificationLog> sent = notificationLogRepository.findByEventIdAndType(e.getId(), "HOUR_BEFORE");
                 if (sent.isEmpty()) {
                     sendHourBeforeNotification(e);
@@ -71,6 +75,11 @@ public class ScheduledPushSender {
                 }
             }
         }
+    }
+
+    private boolean isInWindow(ZonedDateTime startInclusive, ZonedDateTime endInclusive, ZonedDateTime candidate) {
+        if (candidate == null) return false;
+        return !candidate.isBefore(startInclusive) && !candidate.isAfter(endInclusive);
     }
 
     private boolean isSameMinute(ZonedDateTime a, ZonedDateTime b) {
