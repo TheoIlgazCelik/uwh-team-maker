@@ -3,6 +3,7 @@ package com.example.uwhapp.service;
 import java.security.Security;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider; // your JPA entity
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.example.uwhapp.model.Subscription;
@@ -20,12 +21,16 @@ import nl.martijndwars.webpush.Subscription.Keys;
 public class WebPushService {
 
     private final PushService pushService;
-    private final String vapidPublicKey;
-    private final String vapidPrivateKey;
 
-    public WebPushService() throws Exception {
-        this.vapidPublicKey  = "BBNHsiY8rfQoYUWjq6rXGjKvQWBXSLM-nh_6F6XImcrxXXKmM_vDBpsQHnCEwFr6V0na4MPqayyUGgZmOIk2bW0";
-        this.vapidPrivateKey = "SGXg6pd4SNg0z3UxZz6UYzJAfngBw8RcdybI6zPHemQ";
+    public WebPushService(
+        @Value("${vapid.public.key:}") String vapidPublicKey,
+        @Value("${vapid.private.key:}") String vapidPrivateKey
+    ) throws Exception {
+        if (vapidPublicKey == null || vapidPublicKey.isBlank()
+            || vapidPrivateKey == null || vapidPrivateKey.isBlank()) {
+            // fail fast with a clear error
+            throw new IllegalStateException("VAPID keys missing: set vapid.public.key and vapid.private.key");
+        }
 
         // Ensure crypto provider present
         Security.addProvider(new BouncyCastleProvider());
