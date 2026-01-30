@@ -32,8 +32,11 @@ function setAdminUI(isAdmin) {
   // admin panel
   setVisible('admin-panel', !!isAdmin);
 
-  // teams card (admin-only UI)
-  setVisible('teams-card', !!isAdmin);
+  // teams card should be visible to everyone (we only hide generation controls for non-admins)
+  setVisible('teams-card', true);
+
+  // show/hide the internal generation UI
+  setVisible('generate-controls', !!isAdmin);
 
   // create event buttons (admin-only)
   const createEventBtn = document.getElementById('create-event-btn');
@@ -139,7 +142,7 @@ function createEventDiv(ev) {
   attendeesBtn.onclick = () => showAttendees(ev.id);
   div.appendChild(attendeesBtn);
 
-  // show saved teams (admin view)
+    // show saved teams (make available to everyone)
   const showTeamsBtn = document.createElement('button');
   showTeamsBtn.innerText = 'Show saved teams';
   // add a console.log so we can confirm the click fired
@@ -147,8 +150,9 @@ function createEventDiv(ev) {
     console.log('Show saved teams clicked for event', ev.id);
     showSavedTeams(ev.id);
   };
-  // show only for admins (keeps current UX)
-  if (currentUser && currentUser.isAdmin) div.appendChild(showTeamsBtn);
+  // previously this button was only appended for admins; now allow everyone to use it
+  div.appendChild(showTeamsBtn);
+
 
 
   // admin quick-edit: if current user is admin, show simple edit/delete links (optional)
