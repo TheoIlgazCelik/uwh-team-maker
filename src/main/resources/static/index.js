@@ -142,7 +142,7 @@ function createEventDiv(ev) {
   attendeesBtn.onclick = () => showAttendees(ev.id);
   div.appendChild(attendeesBtn);
 
-    // show saved teams (make available to everyone)
+  // show saved teams (make available to everyone)
   const showTeamsBtn = document.createElement('button');
   showTeamsBtn.innerText = 'Show saved teams';
   // add a console.log so we can confirm the click fired
@@ -346,13 +346,43 @@ async function generateTeams() {
     });
     const c = document.getElementById('teams-container');
     if (c) c.innerHTML = '';
-    teams.forEach(t => {
+    teams.forEach((t, idx) => {
       const div = document.createElement('div');
       div.className = 'card';
       const members = (t.members || []).map(m => m.name || m).join(', ');
+
+      // compute numeric teamIndex (fallback to array index + 1)
+      const teamIndex = (t.teamIndex || (typeof t.name === 'number' ? t.name : null) || (idx + 1));
+
       div.innerHTML = `<strong>Team ${t.teamIndex || t.name || '?'}</strong><div>${members}</div>`;
+
+      if (currentUser && currentUser.isAdmin) {
+        const plus = document.createElement('button');
+        plus.innerText = '+';
+        plus.onclick = () => {
+          console.log('adminAdjust + clicked', { eventId, teamIndex });
+          adminAdjustTeamSkill(eventId, teamIndex, +1);
+        };
+
+        const minus = document.createElement('button');
+        minus.innerText = '−';
+        minus.onclick = () => {
+          console.log('adminAdjust - clicked', { eventId, teamIndex });
+          adminAdjustTeamSkill(eventId, teamIndex, -1);
+        };
+
+        const recordBtn = document.createElement('button');
+        recordBtn.innerText = 'Record result';
+        recordBtn.onclick = () => promptAndRecordMatches(eventId);
+
+        div.appendChild(plus);
+        div.appendChild(minus);
+        div.appendChild(recordBtn);
+      }
+
       if (c) c.appendChild(div);
     });
+
   } catch (e) {
     alert('Generate teams failed: ' + e.message);
   }
@@ -444,7 +474,7 @@ async function showSavedTeams(eventId) {
     }
 
     // render teams
-    teams.forEach(t => {
+    teams.forEach((t, idx) => {
       const div = document.createElement('div');
       div.className = 'card';
       // friendly member text: Name (skill: X)
@@ -454,8 +484,36 @@ async function showSavedTeams(eventId) {
         return `${name} (skill: ${skill})`;
       }).join(', ');
       div.innerHTML = `<strong>Team ${t.teamIndex || '?'}</strong><div>${members}</div>`;
+
+      // compute teamIndex numeric fallback
+      const teamIndex = (t.teamIndex || (idx + 1));
+
+      if (currentUser && currentUser.isAdmin) {
+        const plus = document.createElement('button');
+        plus.innerText = '+';
+        plus.onclick = () => {
+          console.log('adminAdjust + clicked (saved)', { eventId, teamIndex });
+          adminAdjustTeamSkill(eventId, teamIndex, +1);
+        };
+        const minus = document.createElement('button');
+        minus.innerText = '−';
+        minus.onclick = () => {
+          console.log('adminAdjust - clicked (saved)', { eventId, teamIndex });
+          adminAdjustTeamSkill(eventId, teamIndex, -1);
+        };
+
+        const recordBtn = document.createElement('button');
+        recordBtn.innerText = 'Record result';
+        recordBtn.onclick = () => promptAndRecordMatches(eventId);
+
+        div.appendChild(plus);
+        div.appendChild(minus);
+        div.appendChild(recordBtn);
+      }
+
       c.appendChild(div);
     });
+
 
     // ensure admin teams panel is visible
     setVisible('teams-card', true);
@@ -524,6 +582,57 @@ async function ensureSubscribed() {
     console.warn('subscribe error', e);
   }
 }
+
+// call to adjust skill for each player on a team by delta (admin-only)
+async function adminAdjustTeamSkill(eventId, teamIndex, delta) {
+  if (!currentUser || !currentUser.isAdmin) { alert('Admin only'); return; }
+  try {
+    const res = await api(`/admin/events/${eventId}/teams/${teamIndex}/adjust-skill`, {
+      method: 'POST',
+      body: JSON.stringify({ delta })
+    });
+    alert('Adjusted team skill by ' + delta);
+    // refresh saved teams and user list if admin
+    await fetchEvents();
+    if (currentUser && currentUser.isAdmin) fetchAllUsers().catch(() => { });
+  } catch (e) {
+    alert('Adjust failed: ' + e.message);
+  }
+}
+
+// record matches: expects JSON array of matches: e.g.
+// [{"teamA":1,"teamB":2,"winner":1},{"teamA":3,"teamB":4,"winner":4}]
+async function adminRecordMatches(eventId, matches, kFactor = 24) {
+  if (!currentUser || !currentUser.isAdmin) { alert('Admin only'); return; }
+  try {
+    await api(`/admin/events/${eventId}/matches`, {
+      method: 'POST',
+      body: JSON.stringify({ matches, kFactor })
+    });
+    alert('Match results recorded (ELO updated)');
+    await fetchEvents();
+  } catch (e) {
+    alert('Record matches failed: ' + e.message);
+  }
+}
+
+// helper that prompts admin to enter match JSON (simple flow)
+async function promptAndRecordMatches(eventId) {
+  const example = '[{"teamA":1,"teamB":2,"winner":1}]';
+  const raw = prompt('Enter matches as JSON array. Example: ' + example, example);
+  if (!raw) return;
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+    return;
+  }
+  const kStr = prompt('kFactor (optional, default 24)', '24');
+  const k = parseInt(kStr || '24', 10);
+  await adminRecordMatches(eventId, parsed, k);
+}
+
 
 // call this from a button or after login if you want user to opt-in interactively
 async function subscribeToPush() {

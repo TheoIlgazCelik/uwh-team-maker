@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -45,6 +46,139 @@ public class TeamService {
     }
 
     @Transactional
+    public void adjustSkillForTeam(Long eventId, int teamIndex, int delta) {
+        List<Team> teams = teamRepo.findByEventIdOrderByTeamIndex(eventId);
+        Optional<Team> tOpt = teams.stream()
+                .filter(t -> t.getTeamIndex() == teamIndex)
+                .findFirst();
+        if (tOpt.isEmpty()) {
+            return;
+        }
+        Team t = tOpt.get();
+        List<TeamMember> members = teamMemberRepo.findByTeamId(t.getId());
+        if (members.isEmpty()) {
+            return;
+        }
+        List<Long> memberIds = members.stream().map(TeamMember::getUserId).collect(Collectors.toList());
+        List<User> users = userRepo.findAllById(memberIds);
+        for (User u : users) {
+            Integer s = u.getSkill() == null ? 0 : u.getSkill();
+            u.setSkill(s + delta);
+        }
+        userRepo.saveAll(users);
+    }
+
+    /**
+     * MatchDto represents one pairwise game between two teams.
+     */
+    public static class MatchDto {
+
+        public int teamA; // teamIndex (1-based)
+        public int teamB; // teamIndex
+        public int winner; // teamIndex of winner, or 0 for draw (optional)
+    }
+
+    @Transactional
+    public Map<String, Object> applyMatchesAndUpdateElo(Long eventId, List<MatchDto> matches, int kFactor) {
+        // load teams
+        List<Team> teams = teamRepo.findByEventIdOrderByTeamIndex(eventId);
+        if (teams.isEmpty()) {
+            return Map.of("error", "no teams");
+        }
+        // map teamIndex -> Team
+        Map<Integer, Team> teamIndexMap = teams.stream().collect(Collectors.toMap(Team::getTeamIndex, t -> t));
+
+        // helper to compute average rating for a team
+        java.util.function.Function<Integer, Double> teamRating = (teamIndex) -> {
+            Team team = teamIndexMap.get(teamIndex);
+            if (team == null) {
+                return 0.0;
+            }
+            List<TeamMember> members = teamMemberRepo.findByTeamId(team.getId());
+            if (members.isEmpty()) {
+                return 0.0;
+            }
+            List<Long> ids = members.stream().map(TeamMember::getUserId).collect(Collectors.toList());
+            List<User> users = userRepo.findAllById(ids);
+            double sum = users.stream().mapToDouble(u -> (u.getSkill() == null ? 0 : u.getSkill())).sum();
+            return sum / Math.max(1, users.size());
+        };
+
+        // collect all users we will modify (to batch save)
+        Map<Long, User> modifiedUsers = new HashMap<>();
+
+        for (MatchDto m : matches) {
+            // validate teams
+            if (!teamIndexMap.containsKey(m.teamA) || !teamIndexMap.containsKey(m.teamB)) {
+                continue; // skip invalid match
+            }
+            double ratingA = teamRating.apply(m.teamA);
+            double ratingB = teamRating.apply(m.teamB);
+
+            // expected scores
+            double expectedA = 1.0 / (1.0 + Math.pow(10.0, (ratingB - ratingA) / 400.0));
+            double expectedB = 1.0 / (1.0 + Math.pow(10.0, (ratingA - ratingB) / 400.0));
+
+            double scoreA, scoreB;
+            if (m.winner == 0) { // draw
+                scoreA = 0.5;
+                scoreB = 0.5;
+            } else if (m.winner == m.teamA) {
+                scoreA = 1.0;
+                scoreB = 0.0;
+            } else if (m.winner == m.teamB) {
+                scoreA = 0.0;
+                scoreB = 1.0;
+            } else {
+                // invalid winner index — treat as draw
+                scoreA = 0.5;
+                scoreB = 0.5;
+            }
+
+            double changeA = kFactor * (scoreA - expectedA);
+            double changeB = kFactor * (scoreB - expectedB);
+
+            // apply to team members equally
+            Team teamObjA = teamIndexMap.get(m.teamA);
+            Team teamObjB = teamIndexMap.get(m.teamB);
+            List<TeamMember> membersA = teamMemberRepo.findByTeamId(teamObjA.getId());
+            List<TeamMember> membersB = teamMemberRepo.findByTeamId(teamObjB.getId());
+
+            // protect divide-by-zero
+            int nA = Math.max(1, membersA.size());
+            int nB = Math.max(1, membersB.size());
+
+            double perPlayerA = changeA / nA;
+            double perPlayerB = changeB / nB;
+
+            // fetch users and update
+            List<Long> idsA = membersA.stream().map(TeamMember::getUserId).collect(Collectors.toList());
+            List<Long> idsB = membersB.stream().map(TeamMember::getUserId).collect(Collectors.toList());
+            List<User> usersA = idsA.isEmpty() ? Collections.emptyList() : userRepo.findAllById(idsA);
+            List<User> usersB = idsB.isEmpty() ? Collections.emptyList() : userRepo.findAllById(idsB);
+
+            for (User u : usersA) {
+                int cur = u.getSkill() == null ? 0 : u.getSkill();
+                int newSkill = (int) Math.round(cur + perPlayerA);
+                u.setSkill(newSkill);
+                modifiedUsers.put(u.getId(), u);
+            }
+            for (User u : usersB) {
+                int cur = u.getSkill() == null ? 0 : u.getSkill();
+                int newSkill = (int) Math.round(cur + perPlayerB);
+                u.setSkill(newSkill);
+                modifiedUsers.put(u.getId(), u);
+            }
+        } // end matches loop
+
+        if (!modifiedUsers.isEmpty()) {
+            userRepo.saveAll(new ArrayList<>(modifiedUsers.values()));
+        }
+
+        return Map.of("updatedCount", modifiedUsers.size());
+    }
+
+    @Transactional
     public List<List<User>> generateAndSaveTeams(Long eventId, String method) {
         List<Rsvp> yes = rsvpService.findYesForEvent(eventId);
         List<Long> userIds = yes.stream().map(Rsvp::getUserId).collect(Collectors.toList());
@@ -57,9 +191,9 @@ public class TeamService {
         // determine number of teams
         int numPlayers = attendees.size();
         int numTeams;
-        if (numPlayers > 21){
+        if (numPlayers > 21) {
             numTeams = 4;
-        }else {
+        } else {
             numTeams = 2;
         }
         int teamSize = (int) Math.ceil((double) numPlayers / numTeams);

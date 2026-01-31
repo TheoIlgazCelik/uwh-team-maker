@@ -1,6 +1,7 @@
 package com.example.uwhapp.controller;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -183,6 +184,44 @@ public class AdminController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @PostMapping("/events/{eventId}/teams/{teamIndex}/adjust-skill")
+    public ResponseEntity<?> adjustTeamSkill(@RequestHeader("X-Auth-Token") String token,
+                                             @PathVariable Long eventId,
+                                             @PathVariable int teamIndex,
+                                             @RequestBody Map<String, Object> body) {
+        requireAdmin(token);
+        Integer delta = 0;
+        if (body.containsKey("delta")) {
+            delta = (body.get("delta") instanceof Number) ? ((Number) body.get("delta")).intValue() :
+                    Integer.parseInt(body.get("delta").toString());
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("error", "delta required"));
+        }
+        teamService.adjustSkillForTeam(eventId, teamIndex, delta);
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @PostMapping("/events/{eventId}/matches")
+    public ResponseEntity<?> postMatches(@RequestHeader("X-Auth-Token") String token,
+                                         @PathVariable Long eventId,
+                                         @RequestBody Map<String, Object> body) {
+        requireAdmin(token);
+        // expect { "matches": [{ "teamA":1, "teamB":2, "winner":1 }, ...], "kFactor": 24 }
+        List<Map<String,Object>> matchMaps = (List<Map<String,Object>>) body.get("matches");
+        int kFactor = body.containsKey("kFactor") ? ((Number)body.get("kFactor")).intValue() : 24;
+
+        List<TeamService.MatchDto> matches = new ArrayList<>();
+        for (Map<String,Object> mm : matchMaps) {
+            TeamService.MatchDto md = new TeamService.MatchDto();
+            md.teamA = ((Number)mm.get("teamA")).intValue();
+            md.teamB = ((Number)mm.get("teamB")).intValue();
+            md.winner = mm.containsKey("winner") ? ((Number)mm.get("winner")).intValue() : 0;
+            matches.add(md);
+        }
+        Map<String,Object> res = teamService.applyMatchesAndUpdateElo(eventId, matches, kFactor);
+        return ResponseEntity.ok(res);
     }
 
 
