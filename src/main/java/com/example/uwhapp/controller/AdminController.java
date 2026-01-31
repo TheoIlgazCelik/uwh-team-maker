@@ -71,7 +71,7 @@ public class AdminController {
             Map<String,Object> m = new HashMap<>();
             m.put("id", u.getId());
             m.put("name", u.getName());
-            m.put("email", u.getEmail());
+            m.put("username", u.getUsername());
             m.put("skill", u.getSkill());
             m.put("isAdmin", Boolean.TRUE.equals(u.getIsAdmin()));
             return m;

@@ -124,14 +124,14 @@ public class UwhAppApplication {
         return args -> {
             try {
                 if (userRepo.count() == 0) {
-                    User t = new User("Theo", "theo@example.com", 100);
+                    User t = new User("Theo", "theo", 100);
                     t.setIsAdmin(true);
                     t.setPasswordHash(authService.hash("password"));
                     userRepo.save(t);
-                    userRepo.save(new User("Sam", "sam@example.com", 60));
-                    userRepo.save(new User("Alex", "alex@example.com", 50));
-                    userRepo.save(new User("Lee", "lee@example.com", 30));
-                    userRepo.save(new User("Jordan", "jord@example.com", 40));
+                    userRepo.save(new User("Sam", "sam", 60));
+                    userRepo.save(new User("Alex", "alex", 50));
+                    userRepo.save(new User("Lee", "lee", 30));
+                    userRepo.save(new User("Jordan", "jord", 40));
                 }
                 if (eventRepo.count() == 0) {
                     Event e = new Event();

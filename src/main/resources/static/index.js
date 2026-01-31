@@ -52,7 +52,7 @@ function showLoggedIn(user) {
   if (not) not.classList.add('hidden');
   if (logged) logged.classList.remove('hidden');
   const who = document.getElementById('who');
-  if (who) who.innerText = user.name + ' (' + user.email + ')';
+  if (who) who.innerText = user.name + ' (' + user.username + ')';
 }
 function showLoggedOut() {
   const not = document.getElementById('not-logged-in');
@@ -66,10 +66,10 @@ function showLoggedOut() {
 // --- auth actions
 async function register() {
   const name = document.getElementById('reg-name').value;
-  const email = document.getElementById('reg-email').value;
+  const username = document.getElementById('reg-username').value;
   const password = document.getElementById('reg-password').value;
   try {
-    await api('/users', { method: 'POST', body: JSON.stringify({ name, email, password }) });
+    await api('/users', { method: 'POST', body: JSON.stringify({ name, username, password }) });
     document.getElementById('reg-msg').innerText = 'Account created. You can log in.';
   } catch (e) {
     document.getElementById('reg-msg').innerText = 'Error: ' + e.message;
@@ -77,10 +77,10 @@ async function register() {
 }
 
 async function login() {
-  const email = document.getElementById('login-email').value;
+  const username = document.getElementById('login-username').value;
   const password = document.getElementById('login-password').value;
   try {
-    const res = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    const res = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     currentToken = res.token;
     currentUser = res.user;
     localStorage.setItem('uwh_token', currentToken);
@@ -398,7 +398,7 @@ async function fetchAllUsers() {
     users.forEach(u => {
       const div = document.createElement('div');
       div.innerHTML = `
-        ${u.id} — ${u.name} (${u.email}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
+        ${u.id} — ${u.name} (${u.username}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
         <button onclick="adminUpdateSkill(${u.id})">Save</button>
         <button onclick="adminDeleteUser(${u.id})">Delete</button>
       `;
@@ -636,6 +636,10 @@ async function promptAndRecordMatches(eventId) {
 
 // call this from a button or after login if you want user to opt-in interactively
 async function subscribeToPush() {
+  if (!currentUser) {
+    alert('Please log in to enable notifications.');
+    return;
+  }
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     alert("Push / Service Worker not supported in this browser");
     return;

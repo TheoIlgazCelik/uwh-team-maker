@@ -15,7 +15,7 @@ public class User {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
-    private String email;
+    private String username;
     private Integer skill = 0;
     @Column(name = "password_hash")
     private String passwordHash;
@@ -26,9 +26,9 @@ public class User {
 
     public User() {}
 
-    public User(String name, String email, Integer skill) {
+    public User(String name, String username, Integer skill) {
         this.name = name;
-        this.email = email;
+        this.username = username;
         this.skill = skill == null ? 0 : skill;
     }
 
@@ -41,8 +41,8 @@ public class User {
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
     public Integer getSkill() { return skill; }
     public void setSkill(Integer skill) { this.skill = skill; }
     public Instant getCreatedAt() { return createdAt; }

@@ -31,20 +31,20 @@ public class AuthService {
         }
     }
 
-    public User register(String name, String email, String plainPassword) {
-        if (userRepo.findByEmail(email).isPresent()) {
-            throw new IllegalArgumentException("Email already registered");
+    public User register(String name, String username, String plainPassword) {
+        if (userRepo.findByUsername(username).isPresent()) {
+            throw new IllegalArgumentException("Username already registered");
         }
         User u = new User();
         u.setName(name);
-        u.setEmail(email);
+        u.setUsername(username);
         u.setPasswordHash(hash(plainPassword));
         u.setSkill(0);
         return userRepo.save(u);
     }
 
-    public String login(String email, String plainPassword) {
-        Optional<User> ou = userRepo.findByEmail(email);
+    public String login(String username, String plainPassword) {
+        Optional<User> ou = userRepo.findByUsername(username);
         if (ou.isEmpty()) throw new IllegalArgumentException("Invalid credentials");
         User u = ou.get();
         if (!u.getPasswordHash().equals(hash(plainPassword))) {

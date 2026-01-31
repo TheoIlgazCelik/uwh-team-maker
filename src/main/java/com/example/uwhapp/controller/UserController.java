@@ -27,22 +27,22 @@ public class UserController {
     @PostMapping("/users")
     public ResponseEntity<?> createUser(@RequestBody Map<String, String> body) {
         String name = body.get("name");
-        String email = body.get("email").toLowerCase();
+        String username = body.get("username").toLowerCase();
         String password = body.get("password");
-        if (name == null || email == null || password == null) return ResponseEntity.badRequest().body("name,email,password required");
-        User u = authService.register(name, email, password);
+        if (name == null || username == null || password == null) return ResponseEntity.badRequest().body("name,username,password required");
+        User u = authService.register(name, username, password);
         return ResponseEntity.ok(u);
     }
 
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        String email = body.get("email").toLowerCase();
+        String username = body.get("username").toLowerCase();
         String password = body.get("password");
-        if (email == null || password == null) return ResponseEntity.badRequest().body("email,password required");
+        if (username == null || password == null) return ResponseEntity.badRequest().body("username,password required");
         try {
-            String token = authService.login(email, password);
-            User u = userRepository.findByEmail(email).get();
-            return ResponseEntity.ok(Map.of("token", token, "user", Map.of("id", u.getId(), "name", u.getName(), "email", u.getEmail())));
+            String token = authService.login(username, password);
+            User u = userRepository.findByUsername(username).get();
+            return ResponseEntity.ok(Map.of("token", token, "user", Map.of("id", u.getId(), "name", u.getName(), "username", u.getUsername())));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(401).body(ex.getMessage());
         }
@@ -55,7 +55,7 @@ public ResponseEntity<Map<String,Object>> me(@RequestHeader(value = "X-Auth-Toke
                 Map<String,Object> m = new HashMap<>();
                 m.put("id", u.getId());
                 m.put("name", u.getName());
-                m.put("email", u.getEmail().toLowerCase());
+                m.put("username", u.getUsername().toLowerCase());
                 m.put("isAdmin", Boolean.TRUE.equals(u.getIsAdmin()));
                 return ResponseEntity.ok(m);
             })
