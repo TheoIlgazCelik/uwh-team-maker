@@ -132,6 +132,13 @@ public class UwhAppApplication {
                     userRepo.save(new User("Alex", "alex", 50));
                     userRepo.save(new User("Lee", "lee", 30));
                     userRepo.save(new User("Jordan", "jord", 40));
+                    for (char c = 'a'; c <= 'z'; c++) {
+                        int skill = c - 'a' + 1;
+                        String s = String.valueOf(c);
+
+                        userRepo.save(new User(s, s, skill));
+                    }
+
                 }
                 if (eventRepo.count() == 0) {
                     Event e = new Event();
@@ -144,7 +151,7 @@ public class UwhAppApplication {
                 if (rsvpRepo.count() == 0) {
                     Event event = eventRepo.findAll().get(0);
                     List<User> users = userRepo.findAll();
-                    for (int i = 0; i < users.size(); i++) {
+                    for (int i = 0; i < 3; i++) {
                         User u = users.get(i);
                         String status;
                         if (i == 0) status = "yes";
@@ -154,6 +161,11 @@ public class UwhAppApplication {
                         else status = "maybe";
 
                         Rsvp r = new Rsvp(event.getId(), u.getId(), status);
+                        rsvpRepo.save(r);
+                    }
+                    for (int i = 4;i<users.size();i++){
+                        User u = users.get(i);
+                        Rsvp r = new Rsvp(event.getId(), u.getId(), "yes");
                         rsvpRepo.save(r);
                     }
                 }

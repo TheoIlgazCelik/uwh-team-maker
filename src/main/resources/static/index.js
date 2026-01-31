@@ -483,7 +483,12 @@ async function showSavedTeams(eventId) {
         const skill = typeof m.skill === 'number' ? m.skill : (m.skill ? m.skill : 0);
         return `${name} (skill: ${skill})`;
       }).join(', ');
-      div.innerHTML = `<strong>Team ${t.teamIndex || '?'}</strong><div>${members}</div>`;
+      // compute total skill
+      const totalSkill = (t.members || []).reduce((sum, m) => {
+        const skill = typeof m.skill === 'number' ? m.skill : (m.skill ? m.skill : 0);
+        return sum + skill;
+      }, 0);
+      div.innerHTML = `<strong>Team ${t.teamIndex || '?'}   -  Skill ${totalSkill}</strong><div>${members}</div>`;
 
       // compute teamIndex numeric fallback
       const teamIndex = (t.teamIndex || (idx + 1));
