@@ -1,5 +1,3 @@
-// index.js — paste/replace your current file with this
-
 const apiBase = window.location.origin; // same origin since served from Spring Boot
 let currentUser = null;
 let currentToken = localStorage.getItem('uwh_token') || null;
@@ -397,11 +395,19 @@ async function fetchAllUsers() {
     if (container) container.innerHTML = '';
     users.forEach(u => {
       const div = document.createElement('div');
-      div.innerHTML = `
-        ${u.id} — ${u.name} (${u.username}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
-        <button onclick="adminUpdateSkill(${u.id})">Save</button>
-        <button onclick="adminDeleteUser(${u.id})">Delete</button>
-      `;
+
+      // only admins should ever see or edit skill values; this function is admin-only but keep the check defensive
+      if (currentUser && currentUser.isAdmin) {
+        div.innerHTML = `
+          ${u.id} — ${u.name} (${u.username}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
+          <button onclick="adminUpdateSkill(${u.id})">Save</button>
+          <button onclick="adminDeleteUser(${u.id})">Delete</button>
+        `;
+      } else {
+        // defensive fallback: don't show skills to non-admins
+        div.innerHTML = `${u.id} — ${u.name} (${u.username})`;
+      }
+
       if (container) container.appendChild(div);
     });
   } catch (e) {
@@ -445,6 +451,7 @@ async function adminCreateEvent() {
     alert('create event failed: ' + e.message);
   }
 }
+
 async function showSavedTeams(eventId) {
   console.log('showSavedTeams called for eventId=', eventId);
   try {
@@ -473,22 +480,35 @@ async function showSavedTeams(eventId) {
       return;
     }
 
+    // determine whether current viewer is an admin
+    const isAdmin = !!(currentUser && currentUser.isAdmin);
+
     // render teams
     teams.forEach((t, idx) => {
       const div = document.createElement('div');
       div.className = 'card';
-      // friendly member text: Name (skill: X)
+
+      // friendly member text: Name (skill: X) only for admins
       const members = (t.members || []).map(m => {
-        const name = m.name || ('id:' + (m.id || '?'));
-        const skill = typeof m.skill === 'number' ? m.skill : (m.skill ? m.skill : 0);
-        return `${name} (skill: ${skill})`;
+        const name = m && (m.name || m.username) ? (m.name || m.username) : ('id:' + (m && (m.id || '?')));
+        if (isAdmin) {
+          const skill = typeof m.skill === 'number' ? m.skill : (m.skill ? m.skill : 0);
+          return `${name} (skill: ${skill})`;
+        }
+        return name; // non-admins see only names
       }).join(', ');
-      // compute total skill
-      const totalSkill = (t.members || []).reduce((sum, m) => {
-        const skill = typeof m.skill === 'number' ? m.skill : (m.skill ? m.skill : 0);
-        return sum + skill;
-      }, 0);
-      div.innerHTML = `<strong>Team ${t.teamIndex || '?'}   -  Skill ${totalSkill}</strong><div>${members}</div>`;
+
+      // compute total skill only for admins (otherwise don't expose it)
+      let headerText = `Team ${t.teamIndex || (idx + 1)}`;
+      if (isAdmin) {
+        const totalSkill = (t.members || []).reduce((sum, m) => {
+          const skill = typeof m.skill === 'number' ? m.skill : (m.skill ? m.skill : 0);
+          return sum + skill;
+        }, 0);
+        headerText += `   -  Skill ${totalSkill}`;
+      }
+
+      div.innerHTML = `<strong>${headerText}</strong><div>${members}</div>`;
 
       // compute teamIndex numeric fallback
       const teamIndex = (t.teamIndex || (idx + 1));
