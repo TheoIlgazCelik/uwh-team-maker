@@ -17,14 +17,17 @@ import com.example.uwhapp.repository.EventRepository;
 import com.example.uwhapp.repository.NotificationLogRepository;
 import com.example.uwhapp.repository.RsvpRepository;
 import com.example.uwhapp.repository.SubscriptionRepository;
+import com.example.uwhapp.repository.UserRepository;
 
 @Component
 public class ScheduledPushSender {
 
     private final EventRepository eventRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final UserRepository userRepository;
     private final NotificationLogRepository notificationLogRepository;
     private final WebPushService webPushService;
+    private final RsvpService rsvpService;
     private final RsvpRepository rsvpRepository;
     private final TeamService teamService;
 
@@ -34,11 +37,14 @@ public class ScheduledPushSender {
             SubscriptionRepository subscriptionRepository,
             NotificationLogRepository notificationLogRepository,
             WebPushService webPushService,
-            RsvpRepository rsvpRepository, TeamService teamService) {
+            RsvpRepository rsvpRepository, TeamService teamService, 
+            UserRepository userRepository, RsvpService rsvpService) {
         this.eventRepository = eventRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.userRepository = userRepository;
         this.notificationLogRepository = notificationLogRepository;
         this.webPushService = webPushService;
+        this.rsvpService = rsvpService;
         this.rsvpRepository = rsvpRepository;
         this.teamService = teamService;
     }
@@ -74,7 +80,13 @@ public class ScheduledPushSender {
                 Optional<NotificationLog> teamsGenerated = notificationLogRepository.findByEventIdAndType(e.getId(), "TEAMS_GENERATED");
                 if (teamsGenerated.isEmpty()) {
                     try {
-                        String method = "Balanced";
+                        List<Rsvp> yes = rsvpService.findYesForEvent(e.getId());
+                        String method = "Random";
+                        if (yes.size() <=19) {
+                            method = "Balanced";
+                        } else {
+                            method = "Uneven-Balanced";
+                        }
 
                         System.out.println("Auto-generating teams for event" + e.getId() + "using method " +  method);
                         teamService.generateAndSaveTeams(e.getId(), method);

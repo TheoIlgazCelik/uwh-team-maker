@@ -191,7 +191,7 @@ public class TeamService {
         // determine number of teams
         int numPlayers = attendees.size();
         int numTeams;
-        if (numPlayers > 21) {
+        if (numPlayers > 19) {
             numTeams = 4;
         } else {
             numTeams = 2;
