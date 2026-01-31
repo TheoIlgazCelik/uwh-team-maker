@@ -81,12 +81,8 @@ public class ScheduledPushSender {
                 if (teamsGenerated.isEmpty()) {
                     try {
                         List<Rsvp> yes = rsvpService.findYesForEvent(e.getId());
-                        String method = "Random";
-                        if (yes.size() <=19) {
-                            method = "Balanced";
-                        } else {
-                            method = "Uneven-Balanced";
-                        }
+                        String method = "Balanced";
+                        
 
                         System.out.println("Auto-generating teams for event" + e.getId() + "using method " +  method);
                         teamService.generateAndSaveTeams(e.getId(), method);
