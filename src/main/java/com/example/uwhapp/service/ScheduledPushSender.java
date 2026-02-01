@@ -3,7 +3,9 @@ package com.example.uwhapp.service;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.Scheduled;
@@ -113,13 +115,30 @@ public class ScheduledPushSender {
     }
 
     private void sendDayOfNotification(Event e) {
-        List<Subscription> subs = subscriptionRepository.findAll();
-        String payload = String.format("{\"title\":\"%s\",\"body\":\"RSVP for the event now\",\"url\":\"/\"}",
-                escapeJson(e.getTitle()));
-        for (Subscription s : subs) {
-            webPushService.sendNotification(s, payload);
-        }
+    // get all users who already responded (any status)
+    List<Rsvp> responded = rsvpRepository.findByEventId(e.getId());
+    Set<Long> respondedUserIds = responded.stream()
+            .map(Rsvp::getUserId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+    // load all subscriptions, then exclude those whose userId is in respondedUserIds
+    List<Subscription> allSubs = subscriptionRepository.findAll();
+    List<Subscription> subsToNotify;
+    if (respondedUserIds.isEmpty()) {
+        subsToNotify = allSubs; // nobody responded -> notify everyone
+    } else {
+        subsToNotify = allSubs.stream()
+                .filter(s -> s.getUserId() == null || !respondedUserIds.contains(s.getUserId()))
+                .collect(Collectors.toList());
     }
+
+    String payload = String.format("{\"title\":\"%s\",\"body\":\"RSVP for the event now\",\"url\":\"/\"}",
+            escapeJson(e.getTitle()));
+    for (Subscription s : subsToNotify) {
+        webPushService.sendNotification(s, payload);
+    }
+}
 
     private void sendHourBeforeNotification(Event e) {
         // use RsvpRepository.findByEventIdAndStatus to find RSVPs with status "yes"
