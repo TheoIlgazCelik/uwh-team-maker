@@ -39,7 +39,7 @@ public class AuthService {
         u.setName(name);
         u.setUsername(username);
         u.setPasswordHash(hash(plainPassword));
-        u.setSkill(0);
+        u.setSkill(50);
         return userRepo.save(u);
     }
 
