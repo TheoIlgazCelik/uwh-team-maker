@@ -199,3 +199,57 @@ button:active {
         width: 100%;
     }
 }
+
+/* ---------- RSVP buttons (larger, spaced, selectable) ---------- */
+/* RSVP group: stretch to full width and push buttons to opposite ends */
+.rsvp-group {
+  display: flex;
+  justify-content: space-between; /* Yes left, No right */
+  gap: 14px;
+  margin-top: 10px;
+  align-items: center;
+  width: 100%;          /* make group span full container width */
+  max-width: 560px;     /* optional: prevents it from getting overly wide on big screens */
+}
+
+/* Buttons take up plenty of space so they're easy to hit */
+.rsvp-btn {
+  flex: 0 0 48%;        /* each button ~48% of group width, leaving 4% for gap */
+  padding: 14px 18px;   /* larger touch target */
+  font-size: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  min-width: 90px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  user-select: none;
+}
+
+
+.rsvp-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* distinct base styles for yes/no */
+.rsvp-yes {
+  background: rgba(34, 139, 34, 0.06); /* subtle green tint */
+  color: var(--navy);
+  border-color: rgba(34, 139, 34, 0.18);
+  font-weight: 600;
+}
+
+.rsvp-no {
+  background: rgba(220, 53, 69, 0.04); /* subtle red tint */
+  color: var(--navy);
+  border-color: rgba(220, 53, 69, 0.16);
+  font-weight: 600;
+}
+
+/* highlighted/selected state so user knows their current response */
+.rsvp-btn.selected {
+  box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+  transform: translateY(-2px);
+  outline: 3px solid rgba(0, 0, 0, 0.501); /* subtle gold outline for visibility */
+}

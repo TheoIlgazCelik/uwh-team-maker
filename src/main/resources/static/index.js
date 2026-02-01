@@ -66,6 +66,10 @@ async function register() {
   const name = document.getElementById('reg-name').value;
   const username = document.getElementById('reg-username').value;
   const password = document.getElementById('reg-password').value;
+  if (name.length < 1 || username.length < 1 || password.length < 1) {
+    document.getElementById('reg-msg').innerText = 'All fields required';
+    return;
+  }
   try {
     await api('/users', { method: 'POST', body: JSON.stringify({ name, username, password }) });
     document.getElementById('reg-msg').innerText = 'Account created. You can log in.';
@@ -131,15 +135,51 @@ function createEventDiv(ev) {
   div.innerHTML = `<strong>${ev.title}</strong> — ${when}${location}`;
   div.appendChild(document.createElement('br'));
 
-  // RSVP buttons
+  // --- RSVP button group (larger, spaced, selectable)
+  const rsvpGroup = document.createElement('div');
+  rsvpGroup.className = 'rsvp-group';
+
   const yesBtn = document.createElement('button');
   yesBtn.innerText = 'Yes';
-  yesBtn.onclick = () => rsvp(ev.id, 'yes');
+  yesBtn.className = 'rsvp-btn rsvp-yes';
+  yesBtn.setAttribute('aria-pressed', 'false');
+
   const noBtn = document.createElement('button');
   noBtn.innerText = 'No';
-  noBtn.onclick = () => rsvp(ev.id, 'no');
-  div.appendChild(yesBtn);
-  div.appendChild(noBtn);
+  noBtn.className = 'rsvp-btn rsvp-no';
+  noBtn.setAttribute('aria-pressed', 'false');
+
+  // optimistic UI + keep buttons disabled while request in flight
+  yesBtn.onclick = () => {
+    yesBtn.disabled = true; noBtn.disabled = true;
+    // optimistic highlight
+    yesBtn.classList.add('selected');
+    noBtn.classList.remove('selected');
+    yesBtn.setAttribute('aria-pressed', 'true');
+    noBtn.setAttribute('aria-pressed', 'false');
+
+    // call existing rsvp function (it handles alerts/errors)
+    // rsvp returns a promise (it uses fetch internally)
+    rsvp(ev.id, 'yes').finally(() => {
+      yesBtn.disabled = false; noBtn.disabled = false;
+    });
+  };
+
+  noBtn.onclick = () => {
+    yesBtn.disabled = true; noBtn.disabled = true;
+    noBtn.classList.add('selected');
+    yesBtn.classList.remove('selected');
+    noBtn.setAttribute('aria-pressed', 'true');
+    yesBtn.setAttribute('aria-pressed', 'false');
+
+    rsvp(ev.id, 'no').finally(() => {
+      yesBtn.disabled = false; noBtn.disabled = false;
+    });
+  };
+
+  rsvpGroup.appendChild(yesBtn);
+  rsvpGroup.appendChild(noBtn);
+  div.appendChild(rsvpGroup);
 
   // attendees
   const attendeesBtn = document.createElement('button');
@@ -147,20 +187,16 @@ function createEventDiv(ev) {
   attendeesBtn.onclick = () => showAttendees(ev.id);
   div.appendChild(attendeesBtn);
 
-  // show saved teams (make available to everyone)
+  // show saved teams
   const showTeamsBtn = document.createElement('button');
   showTeamsBtn.innerText = 'Show saved teams';
-  // add a console.log so we can confirm the click fired
   showTeamsBtn.onclick = () => {
     console.log('Show saved teams clicked for event', ev.id);
     showSavedTeams(ev.id);
   };
-  // previously this button was only appended for admins; now allow everyone to use it
   div.appendChild(showTeamsBtn);
 
-
-
-  // admin quick-edit: if current user is admin, show simple edit/delete links (optional)
+  // admin quick-edit (unchanged)
   if (currentUser && currentUser.isAdmin) {
     const editBtn = document.createElement('button');
     editBtn.innerText = 'Edit (admin)';
