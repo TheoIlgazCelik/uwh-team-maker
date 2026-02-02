@@ -442,7 +442,7 @@ async function fetchAllUsers() {
       // only admins should ever see or edit skill values; this function is admin-only but keep the check defensive
       if (currentUser && currentUser.isAdmin) {
         div.innerHTML = `
-          ${u.id} — ${u.name} (${u.username}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
+          ${u.name} (${u.username}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
           <button onclick="adminUpdateSkill(${u.id})">Save</button>
           <button onclick="adminDeleteUser(${u.id})">Delete</button>
         `;
