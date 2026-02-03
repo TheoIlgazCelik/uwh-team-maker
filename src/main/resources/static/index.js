@@ -444,7 +444,7 @@ async function fetchAllUsers() {
         div.innerHTML = `
           ${u.name} (${u.username}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
           <button onclick="adminUpdateSkill(${u.id})">Save</button>
-          <button onclick="adminDeleteUser(${u.id})">Delete</button>
+          <button onclick="adminDeleteUser(${u.id}, '${u.name}')">Delete</button>
         `;
       } else {
         // defensive fallback: don't show skills to non-admins
@@ -470,9 +470,9 @@ async function adminUpdateSkill(id) {
   }
 }
 
-async function adminDeleteUser(id) {
+async function adminDeleteUser(id,name) {
   if (!currentUser || !currentUser.isAdmin) { alert('Admin only'); return; }
-  if (!confirm('Delete user ' + id + '?')) return;
+  if (!confirm('Delete user ' + name + '?')) return;
   try {
     await api(`/admin/users/${id}`, { method: 'DELETE' });
     alert('deleted');

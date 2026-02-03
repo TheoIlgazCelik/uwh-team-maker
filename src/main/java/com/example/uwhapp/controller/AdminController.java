@@ -2,6 +2,7 @@ package com.example.uwhapp.controller;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +68,7 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<?> listUsers(@RequestHeader("X-Auth-Token") String token) {
         requireAdmin(token);
-        List<Map<String,Object>> out = userRepo.findAll().stream().map(u -> {
+        List<Map<String,Object>> out = userRepo.findAll().stream().sorted(Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER)).map(u -> {
             Map<String,Object> m = new HashMap<>();
             m.put("id", u.getId());
             m.put("name", u.getName());
