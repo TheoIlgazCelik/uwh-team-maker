@@ -436,27 +436,41 @@ async function fetchAllUsers() {
     const users = await api('/admin/users', { method: 'GET' });
     const container = document.getElementById('admin-users');
     if (container) container.innerHTML = '';
+
     users.forEach(u => {
       const div = document.createElement('div');
 
-      // only admins should ever see or edit skill values; this function is admin-only but keep the check defensive
-      if (currentUser && currentUser.isAdmin) {
-        div.innerHTML = `
-          ${u.name} (${u.username}) — skill: <input id="skill-${u.id}" value="${u.skill || 0}" style="width:50px"/>
-          <button onclick="adminUpdateSkill(${u.id})">Save</button>
-          <button onclick="adminDeleteUser(${u.id}, ${JSON.stringify(u.name)})">Delete</button>
-        `;
-      } else {
-        // defensive fallback: don't show skills to non-admins
-        div.innerHTML = `${u.id} — ${u.name} (${u.username})`;
-      }
+      // name/username text
+      const text = document.createElement('span');
+      text.textContent = `${u.name} (${u.username}) — skill: `;
+      div.appendChild(text);
 
-      if (container) container.appendChild(div);
+      // skill input
+      const input = document.createElement('input');
+      input.id = `skill-${u.id}`;
+      input.value = u.skill || 0;
+      input.style.width = '50px';
+      div.appendChild(input);
+
+      // save button
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => adminUpdateSkill(u.id));
+      div.appendChild(saveBtn);
+
+      // delete button
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', () => adminDeleteUser(u.id, u.name));
+      div.appendChild(delBtn);
+
+      container.appendChild(div);
     });
   } catch (e) {
     alert('fetchAllUsers failed: ' + e.message);
   }
 }
+
 
 async function adminUpdateSkill(id) {
   if (!currentUser || !currentUser.isAdmin) { alert('Admin only'); return; }
