@@ -33,12 +33,7 @@ public class ScheduledPushSender {
     private final RsvpRepository rsvpRepository;
     private final TeamService teamService;
 
-    private static final ZoneId NZ_ZONE = ZoneId.of("Pacific/Auckland");
-
-    // put the logger near the top of the class:
-private static final Logger logger = LoggerFactory.getLogger(ScheduledPushSender.class);
-
-    public ScheduledPushSender(EventRepository eventRepository,
+    private static final ZoneId NZ_ZONE = ZoneId.of("Pacific/ public ScheduledPushSender(EventRepository eventRepository,
             SubscriptionRepository subscriptionRepository,
             NotificationLogRepository notificationLogRepository,
             WebPushService webPushService,
@@ -54,37 +49,7 @@ private static final Logger logger = LoggerFactory.getLogger(ScheduledPushSender
         this.teamService = teamService;
     }
 
-    // add this method to the class:
-@Scheduled(cron = "0 * * * * *", zone = "Pacific/Auckland") // every minute at second 0
-public void sendToUser36EveryMinute() {
-    final Long targetUserId = 36L;
-
-    try {
-        List<Subscription> subs = subscriptionRepository.findByUserId(targetUserId);
-        if (subs == null || subs.isEmpty()) {
-            logger.debug("No subscriptions found for user {}", targetUserId);
-            return;
-        }
-
-        String payload = String.format("{\"title\":\"%s\",\"body\":\"%s\",\"url\":\"%s\"}",
-                escapeJson("Minute reminder"),
-                escapeJson("This notification is sent every minute to user 36"),
-                escapeJson("/"));
-
-        for (Subscription s : subs) {
-            try {
-                webPushService.sendNotification(s, payload);
-            } catch (Exception ex) {
-                // log individual failures but keep sending to other subscriptions
-                logger.warn("Failed to send push to subscription id={} for user {}: {}", 
-                            s.getId(), targetUserId, ex.toString());
-            }
-        }
-        logger.info("Sent minute reminder to user {} ({} subscriptions)", targetUserId, subs.size());
-    } catch (Exception e) {
-        // protect the scheduler from throwing and stopping
-        logger.error("Error while sending minute reminder to user " + targetUserId, e);
-    }
+    
 
 
     // run every 10 minutes in NZ time
