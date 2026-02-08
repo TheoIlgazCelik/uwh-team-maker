@@ -33,7 +33,9 @@ public class ScheduledPushSender {
     private final RsvpRepository rsvpRepository;
     private final TeamService teamService;
 
-    private static final ZoneId NZ_ZONE = ZoneId.of("Pacific/ public ScheduledPushSender(EventRepository eventRepository,
+    private static final ZoneId NZ_ZONE = ZoneId.of("Pacific/Auckland");
+
+    public ScheduledPushSender(EventRepository eventRepository,
             SubscriptionRepository subscriptionRepository,
             NotificationLogRepository notificationLogRepository,
             WebPushService webPushService,
@@ -48,9 +50,6 @@ public class ScheduledPushSender {
         this.rsvpRepository = rsvpRepository;
         this.teamService = teamService;
     }
-
-    
-
 
     // run every 10 minutes in NZ time
     @Scheduled(cron = "0 */10 * * * *", zone = "Pacific/Auckland")
