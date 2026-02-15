@@ -83,7 +83,7 @@ public class ScheduledPushSender {
                 if (teamsGenerated.isEmpty()) {
                     try {
                         List<Rsvp> yes = rsvpService.findYesForEvent(e.getId());
-                        String method = "Balanced";
+                        String method = "balanced";
                         
 
                         System.out.println("Auto-generating teams for event" + e.getId() + "using method " +  method);
