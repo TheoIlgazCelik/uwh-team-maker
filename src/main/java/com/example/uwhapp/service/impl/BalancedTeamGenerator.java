@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import com.example.uwhapp.model.User;
 import com.example.uwhapp.service.TeamGenerator;
 
-@Component("Balanced")
+@Component("balanced")
 public class BalancedTeamGenerator implements TeamGenerator {
 
     @Override
